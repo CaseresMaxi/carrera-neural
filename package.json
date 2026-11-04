@@ -1,0 +1,13 @@
+{
+  "name": "sotobosque",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @sotobosque/client dev",
+    "build": "pnpm --filter @sotobosque/client build",
+    "preview": "pnpm --filter @sotobosque/client preview",
+    "test": "pnpm --filter @sotobosque/engine test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@10.33.0"
+}
