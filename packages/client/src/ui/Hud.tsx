@@ -25,16 +25,23 @@ export function TopBar() {
           </button>
         )}
         <button className="help-btn" onClick={() => useGame.setState({ helpOpen: true })}>
-          ❓ Cómo se juega
+          ❓<span className="lbl"> Cómo se juega</span>
         </button>
-        <button onClick={() => st.setTopDown(!st.topDown)}>{st.topDown ? 'Vista 3D' : 'Vista superior'}</button>
-        {st.role !== 'peer' && <button onClick={st.exportSave}>Guardar .json</button>}
+        <button onClick={() => st.setTopDown(!st.topDown)} title={st.topDown ? 'Vista 3D' : 'Vista superior'}>
+          {st.topDown ? '🧊' : '🗺'}
+          <span className="lbl">{st.topDown ? ' Vista 3D' : ' Vista superior'}</span>
+        </button>
+        {st.role !== 'peer' && <button onClick={st.exportSave} title="Guardar .json">
+            💾<span className="lbl"> Guardar .json</span>
+          </button>}
         {st.role === 'local' && (
           <label className="check" title="Tapar la mano al cambiar de turno">
             <input type="checkbox" checked={st.hotseatCoverEnabled} onChange={(e) => st.setHotseatCoverEnabled(e.target.checked)} /> Pase
           </label>
         )}
-        <button onClick={() => confirm('¿Salir de la partida? (queda autoguardada si sos host/local)') && st.leave()}>Salir</button>
+        <button onClick={() => confirm('¿Salir de la partida? (queda autoguardada si sos host/local)') && st.leave()} title="Salir">
+          🚪<span className="lbl"> Salir</span>
+        </button>
       </div>
       {st.role === 'peer' && /desconect/i.test(st.status) && <div className="netstatus">{st.status}</div>}
     </div>

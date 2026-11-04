@@ -19,7 +19,7 @@ import {
   type ItemKind,
   type Move,
 } from '@sotobosque/engine';
-import type { ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useGame, type ActionKind, type UiState } from '../store';
 import { ArtSvg, SuitIcon } from './Art';
 import { CardView } from './Hand';
@@ -174,8 +174,11 @@ export function PlayerBoard() {
   const fs = v.factions[shown]!;
   const mine = shown === me;
   const active = mine && isMyTurn(v, st.mySeat);
+  // en celular el tablero muestra una sección por vez
+  const [sec, setSec] = useState<'acciones' | 'recursos' | 'mano'>('acciones');
 
   if (v.phase === 'fin') return null;
+  const hand = v.handCounts[shown] ?? 0;
 
   return (
     <div className={`pboard ${st.boardOpen ? '' : 'closed'}`} style={{ ['--fc' as string]: def.color }}>
@@ -195,12 +198,26 @@ export function PlayerBoard() {
           </button>
         ))}
         <button className="pb-toggle" onClick={() => useGame.setState({ boardOpen: !st.boardOpen })}>
-          {st.boardOpen ? '▾ Ocultar tablero' : '▴ Mostrar tablero'}
+          {st.boardOpen ? '▾' : '▴'}
+          <span className="lbl">{st.boardOpen ? ' Ocultar tablero' : ' Mostrar tablero'}</span>
         </button>
       </div>
 
       {st.boardOpen && (
-        <div className={`pb-body ${def.nomad ? 'nomad' : ''}`}>
+        <div className={`pb-body ${def.nomad ? 'nomad' : ''} sec-${sec}`}>
+          <nav className="pb-secnav">
+            {(
+              [
+                ['acciones', '▶ Acciones'],
+                ['recursos', def.nomad ? '🎒 Inventario' : '🏗 Recursos'],
+                ['mano', `🃏 Mano (${hand})`],
+              ] as const
+            ).map(([k, label]) => (
+              <button key={k} className={sec === k ? 'on' : ''} onClick={() => setSec(k)}>
+                {label}
+              </button>
+            ))}
+          </nav>
           <section className="pb-id">
             <div className="pb-portrait">
               <ArtSvg id={`char-${shown}`} />
