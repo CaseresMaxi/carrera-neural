@@ -56,6 +56,12 @@ export interface BattleResult {
   defenderRolls: number[];
   attackerHits: number;
   defenderHits: number;
+  /** Guerreros de cada bando al empezar la pelea (para animarla). */
+  attackerWarriors: number;
+  defenderWarriors: number;
+  /** Piezas que perdió cada bando (`items`: componentes quemados o perdidos de un nómade). */
+  attackerLosses: { warriors: number; structures: number; items?: number };
+  defenderLosses: { warriors: number; structures: number; items?: number };
 }
 
 export interface LogEntry {

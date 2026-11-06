@@ -240,14 +240,28 @@ export function ScoreTrack() {
         </group>
       ))}
       {markers.map(({ f, vp, stack }) => (
-        <ScoreMarker key={f} faction={f} x={x0 + vp * step} y={0.05 + stack * 0.09} z={z} />
+        <ScoreMarker key={f} faction={f} vp={view!.factions[f]!.vp} x={x0 + vp * step} y={0.05 + stack * 0.09} z={z} />
       ))}
     </group>
   );
 }
 
-function ScoreMarker({ faction, x, y, z }: { faction: keyof typeof FACTIONS; x: number; y: number; z: number }) {
+function ScoreMarker({ faction, vp, x, y, z }: { faction: keyof typeof FACTIONS; vp: number; x: number; y: number; z: number }) {
   const ref = useRef<THREE.Group>(null);
+  // "+N" flotando cuando la facción suma puntos, y el marcador da un salto
+  const prev = useRef(vp);
+  const [floats, setFloats] = useState<{ id: number; n: number }[]>([]);
+  const hop = useRef(1);
+  useLayoutEffect(() => {
+    const d = vp - prev.current;
+    prev.current = vp;
+    if (d <= 0) return;
+    hop.current = 0;
+    const id = performance.now();
+    setFloats((f) => [...f, { id, n: d }]);
+    const t = window.setTimeout(() => setFloats((f) => f.filter((x) => x.id !== id)), 1800);
+    return () => window.clearTimeout(t);
+  }, [vp]);
   const mats = useMemo(() => {
     const side = new THREE.MeshBasicMaterial({ color: FACTIONS[faction].color });
     const top = new THREE.MeshBasicMaterial({ map: tex(`emblem-${faction}`) });
@@ -257,13 +271,41 @@ function ScoreMarker({ faction, x, y, z }: { faction: keyof typeof FACTIONS; x: 
     const g = ref.current;
     if (!g) return;
     g.position.x += (x - g.position.x) * Math.min(1, dt * 6);
-    g.position.y += (y - g.position.y) * Math.min(1, dt * 6);
+    hop.current = Math.min(1, hop.current + dt * 2.2);
+    const jump = Math.sin(Math.PI * hop.current) * 0.45;
+    g.position.y += (y + jump - g.position.y) * Math.min(1, dt * 14);
   });
   return (
-    <group ref={ref} position={[x, y, z]}>
-      <mesh material={mats} rotation-y={-Math.PI / 2}>
-        <cylinderGeometry args={[0.28, 0.28, 0.08, 28]} />
-      </mesh>
-    </group>
+    <>
+      <group ref={ref} position={[x, y, z]}>
+        <mesh material={mats} rotation-y={-Math.PI / 2}>
+          <cylinderGeometry args={[0.28, 0.28, 0.08, 28]} />
+        </mesh>
+      </group>
+      {floats.map((f) => (
+        <VpFloat key={f.id} n={f.n} x={x} z={z} color={FACTIONS[faction].color} />
+      ))}
+    </>
+  );
+}
+
+function VpFloat({ n, x, z, color }: { n: number; x: number; z: number; color: string }) {
+  const ref = useRef<THREE.Sprite>(null);
+  const t = useRef(0);
+  const map = useMemo(() => labelTexture(`+${n} PV`, { w: 200, h: 80, size: 46, fg: color }), [n, color]);
+  useFrame((_, dt) => {
+    const s = ref.current;
+    if (!s) return;
+    t.current = Math.min(1, t.current + dt / 1.6);
+    const k = t.current;
+    const pop = k < 0.15 ? k / 0.15 : 1;
+    s.position.set(x, 0.6 + k * 1.1, z);
+    s.scale.set(1.3 * pop, 0.52 * pop, 1);
+    (s.material as THREE.SpriteMaterial).opacity = k < 0.7 ? 1 : (1 - k) / 0.3;
+  });
+  return (
+    <sprite ref={ref} position={[x, 0.6, z]} renderOrder={12}>
+      <spriteMaterial map={map} depthTest={false} transparent />
+    </sprite>
   );
 }

@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { useGame } from '../store';
 import { BOARD_TOP } from './Board';
 import { labelTexture, tex } from '../art/textures';
+import { playback } from '../fx/director';
 
 const reducedMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -22,7 +23,7 @@ const FACE_UP: Record<number, THREE.Euler> = {
 const DIE = 0.34;
 const geo = new THREE.BoxGeometry(DIE, DIE, DIE);
 
-function Die({ value, faction, pos, delay }: { value: number; faction: FactionId; pos: THREE.Vector3; delay: number }) {
+function Die({ value, faction, pos, delay, rate = 1.1 }: { value: number; faction: FactionId; pos: THREE.Vector3; delay: number; rate?: number }) {
   const ref = useRef<THREE.Mesh>(null);
   const mats = useMemo(
     () => FACE_VALUES.map((v) => new THREE.MeshBasicMaterial({ map: tex(`die-${faction}-${v}`) })),
@@ -38,7 +39,7 @@ function Die({ value, faction, pos, delay }: { value: number; faction: FactionId
   useFrame((_, dt) => {
     const m = ref.current;
     if (!m) return;
-    t.current = Math.min(1, t.current + dt * 1.1);
+    t.current = Math.min(1, t.current + dt * rate);
     const k = Math.max(0, t.current);
     if (k >= 1) {
       m.quaternion.copy(target);
@@ -55,10 +56,15 @@ function Die({ value, faction, pos, delay }: { value: number; faction: FactionId
   return <mesh ref={ref} geometry={geo} material={mats} position={pos} />;
 }
 
-function HitsLabel({ text, pos }: { text: string; pos: THREE.Vector3 }) {
+function HitsLabel({ text, pos, seq }: { text: string; pos: THREE.Vector3; seq: number }) {
   const t = useMemo(() => labelTexture(text, { w: 520, h: 84, size: 46 }), [text]);
+  const ref = useRef<THREE.Sprite>(null);
+  // mientras corre la animación de la pelea, el resultado lo cuenta el clip; el cartel queda al final
+  useFrame(() => {
+    if (ref.current) ref.current.visible = playback()?.battle.seq !== seq;
+  });
   return (
-    <sprite position={pos} scale={[2.3, 0.37, 1]} renderOrder={11}>
+    <sprite ref={ref} position={pos} scale={[2.3, 0.37, 1]} renderOrder={11}>
       <spriteMaterial map={t} depthTest={false} transparent />
     </sprite>
   );
@@ -83,19 +89,25 @@ export function DiceTray() {
   }, [battle?.seq]);
 
   if (!shown) return null;
+  // si hay una animación de pelea, los dados entran cuando lo dice el clip (paso "dice")
+  const p = playback();
+  const step = p && p.battle.seq === shown.seq ? p.steps.find((s) => s.fx === 'dice') : undefined;
+  const d0 = step ? step.at / 1000 : 0;
+  const rate = step ? 1000 / (step.dur * 0.8) : 1.1;
   const g = GLADES[shown.glade];
   const base = new THREE.Vector3(g.x, BOARD_TOP + DIE / 2 + 0.08, g.z + 1.55);
   return (
     <group key={shown.seq}>
       {shown.attackerRolls.map((v, i) => (
-        <Die key={`a${i}`} value={v} faction={shown.attacker} pos={base.clone().add(new THREE.Vector3(-0.95 + i * 0.36, 0, 0))} delay={i * 0.08} />
+        <Die key={`a${i}`} value={v} faction={shown.attacker} pos={base.clone().add(new THREE.Vector3(-0.95 + i * 0.36, 0, 0))} delay={d0 + i * 0.08} rate={rate} />
       ))}
       {shown.defenderRolls.map((v, i) => (
-        <Die key={`d${i}`} value={v} faction={shown.defender} pos={base.clone().add(new THREE.Vector3(0.35 + i * 0.36, 0, 0))} delay={0.15 + i * 0.08} />
+        <Die key={`d${i}`} value={v} faction={shown.defender} pos={base.clone().add(new THREE.Vector3(0.35 + i * 0.36, 0, 0))} delay={d0 + 0.15 + i * 0.08} rate={rate} />
       ))}
       <HitsLabel
         text={`${FACTIONS[shown.attacker].short} ${shown.attackerHits} ⚔ ${shown.defenderHits} ${FACTIONS[shown.defender].short}`}
         pos={base.clone().add(new THREE.Vector3(0, 0.75, 0))}
+        seq={shown.seq}
       />
     </group>
   );

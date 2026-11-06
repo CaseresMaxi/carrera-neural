@@ -8,6 +8,7 @@ import { useGame } from '../store';
 import { BoardBase, Forest, Glades, ScoreTrack, Table } from './Board';
 import { DiceTray } from './Dice';
 import { PiecesLayer } from './Pieces';
+import { BattleFx3D } from '../fx/BattleFx3D';
 
 const reducedMotion = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 const HOME: [number, number, number, number, number, number] = [0, 13.5, 14.5, 0, 0, 0.8];
@@ -114,6 +115,7 @@ export function Scene() {
       <Glades />
       <Forest />
       <PiecesLayer />
+      <BattleFx3D />
       <DiceTray />
       <ScoreTrack />
       <CameraRig />

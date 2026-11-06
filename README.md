@@ -74,6 +74,7 @@ packages/
     src/store.ts        sesión: Authority (host/local), host P2P, peer P2P, save/load, undo
     src/net/protocol.ts mensajes host ↔ peer
     src/scene/          escena 3D: tablero, mercados, conexiones, corriente de datos, ciudad instanciada, piezas, dados, pista de PV
+    src/fx/             animaciones de pelea: clips como datos (clips.ts), director (director.ts) y efectos 3D (BattleFx3D.tsx)
     src/ui/             HUD 2D: mano en abanico, panel de acciones, facciones, log
 ```
 
@@ -86,8 +87,19 @@ packages/
 - **Escena 3D como diorama de papel:** el tablero es el mapa pintado; personajes y árboles son figuras de cartón
   que miran a la cámara (los árboles van agrupados en `InstancedMesh`); las estructuras son losetas ilustradas y los dados
   tienen caras dibujadas. Todo con `MeshBasicMaterial` y sombras falsas (manchas), para conservar los colores del dibujo.
-- **Animaciones:** las piezas viajan en arco entre mercados, aparecen con “pop”, los dados caen y quedan en el resultado ya
-  resuelto por el host (animación cosmética), y la cámara hace un corte corto a la batalla. Respeta `prefers-reduced-motion`.
+- **Animaciones:** las piezas viajan en arco entre mercados, aparecen con “pop” y, cuando salen del tablero, caen y se
+  desvanecen. Al sumar puntos, el marcador salta y flota un “+N PV”. La cámara hace un corte corto a cada batalla, y la
+  batalla se anima con un **clip**. Respeta `prefers-reduced-motion`.
+- **Peleas animadas con datos** (`src/fx/clips.ts`, mismo formato que `animations.json` del motor
+  [mesa](https://github.com/CaseresMaxi/mesa)): cada clip es una línea de tiempo de efectos.
+  - Efectos: `lunge` (las figuras embisten), `shake`, `flash`, `projectile` (en arco, con estela), `burst` (partículas),
+    `ring` (onda expansiva), `dice` (sincroniza los dados 3D), `casualties` (las bajas caen) y `text`.
+  - Cada paso puede correr sólo con ciertos resultados (`when`: `attackerWins`, `attackerLost`, `undefended`…).
+  - El clip lo elige la facción atacante: el Redditor usa `trolleo` (estrellitas y burla) y el resto, `benchmark`
+    (ráfaga de tokens).
+  - El motor guarda en `lastBattle` cuántos guerreros tenía cada bando y qué perdió cada uno (para el nómade cuenta los
+    componentes quemados). Es puramente cosmético: no cambia reglas ni balance.
+  - En desarrollo, `__fx.setFxSpeed(0.3)` en la consola la reproduce en cámara lenta.
 - **Undo:** sólo moves sin azar ni información nueva (mover, reclutar, construir, encender, esfuerzo) dentro del mismo turno.
 
 ### Cámara

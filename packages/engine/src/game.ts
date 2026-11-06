@@ -3,6 +3,7 @@ import { AID_VP, FACTIONS, FINETUNE_VP, ITEMS, MAX_ITEMS, REFRESH_ITEMS, START_I
 import { GLADES, START_CORNERS, distance, isAdjacent, neighbors } from './map';
 import { rngOf } from './rng';
 import type {
+  BattleResult,
   Card,
   FactionId,
   FactionState,
@@ -353,7 +354,7 @@ function removePieces(
   victim: FactionId,
   hits: number,
   by: FactionId,
-): { warriors: number; structures: number } {
+): { warriors: number; structures: number; items?: number } {
   const vs = s.factions[victim]!;
   let warriors = 0;
   let structures = 0;
@@ -366,7 +367,7 @@ function removePieces(
       else if (vs.items!.length) vs.items!.pop(), lost++;
     }
     if (burned + lost) log(s, victim, `Recibe golpes: ${burned} componente(s) quemado(s)${lost ? `, ${lost} perdido(s)` : ''}.`);
-    return { warriors: 0, structures: 0 };
+    return { warriors: 0, structures: 0, items: burned + lost };
   }
   while (hits > 0 && warriorsAt(glade, victim) > 0) {
     glade.warriors[victim] = warriorsAt(glade, victim) - 1;
@@ -407,7 +408,7 @@ function resolveBattle(s: GameState, gladeId: number, att: FactionId, def: Facti
   if (defW === 0) attackerHits += 1; // indefenso
   if (defW > 0) defenderHits += FACTIONS[def].defenseBonus;
 
-  s.lastBattle = {
+  const battle: BattleResult = {
     seq: s.moveCount,
     glade: gladeId,
     attacker: att,
@@ -416,7 +417,12 @@ function resolveBattle(s: GameState, gladeId: number, att: FactionId, def: Facti
     defenderRolls,
     attackerHits,
     defenderHits,
+    attackerWarriors: attW,
+    defenderWarriors: defW,
+    attackerLosses: { warriors: 0, structures: 0 },
+    defenderLosses: { warriors: 0, structures: 0 },
   };
+  s.lastBattle = battle;
   log(
     s,
     att,
@@ -427,6 +433,8 @@ function resolveBattle(s: GameState, gladeId: number, att: FactionId, def: Facti
   // Impactos simultáneos
   const dealt = removePieces(s, g, def, attackerHits, att);
   const taken = removePieces(s, g, att, defenderHits, def);
+  battle.defenderLosses = dealt;
+  battle.attackerLosses = taken;
   if (dealt.warriors + dealt.structures > taken.warriors + taken.structures) s.battlesWon++;
 }
 
